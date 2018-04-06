@@ -1,11 +1,18 @@
 from typing import List, Tuple
 
 class Player(object):
-    def __init__(self, attack=0):
+    def __init__(self, id, attack=0):
+        self.id = id
         self.attack = attack
 
     def __add__(self, other: 'Player') -> 'Coalition':
+        # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
         return Coalition([self, other])
+
+    def get_intent(self):
+        # Auro, this function --------
+        # TODO: add a brain here. change later.
+        return Intent(self.id, (self.id+1)%3+1, "battle")
 
 class Coalition(Player):
     def __init__(self, players):
@@ -27,9 +34,15 @@ class Coalition(Player):
             attrs[i] = sum([x.__dict__[i] for x in self.players])
         return attrs
 
+class Intent(object):
+    def __init__(self, player, target, type):
+        self.player = player
+        self.target = target
+        self.type = type # Type is the type of move
+
 class Game(object):
     def __init__(self, players = 2):
-        self.players = [Player() for i in range(players)]
+        self.players = [Player(i+1, 5) for i in range(players)]
         self.coalitions = None
 
     def step(self):
@@ -37,18 +50,23 @@ class Game(object):
         One time step of the game
         :return:
         """
-        self.form_coalitions()
-        self.battle()
+
+        intents = [x.get_intent() for x in self.players]
+
+        self.form_coalitions(intents) # Sends request to player to accept or reject
+        self.battle(intents)
         self.check_state()
 
-    def battle(self)-> List(Player):
+    def battle(self, intents)-> List[Player]:
         """
         Simulates a battle
         :return: list(Player) Losers
         """
-        pass
+        for intent in intents:
+            if intent.type == "battle":
+                pass
 
-    def form_coalitions(self):
+    def form_coalitions(self, intents):
         """
         Simulates coalition forming of players. Updates self.players()
         :return:
@@ -64,7 +82,7 @@ def visualize(game):
 
 
 if __name__ == '__main__':
-    game = Game(2)
+    game = Game(3)
     while True:
         state = game.step()
         visualize(game)
