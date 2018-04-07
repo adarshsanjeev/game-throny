@@ -1,5 +1,8 @@
 from typing import List, Tuple
+import random
+PLAYERS = 3
 STEPS = 10
+LOSS_FACTOR = 0.5
 
 class Player(object):
     def __init__(self, id, attack=0):
@@ -43,11 +46,11 @@ class Intent(object):
         self.type = type # Type is the type of move
 
 class Game(object):
-    LOSS_FACTOR = 0.5
 
     def __init__(self, players = 2):
-        self.players = [Player(i+1, 5) for i in range(players)]
+        self.players = [Player(i+1, random.randint(10, 30)) for i in range(players)]
         self.coalitions = None
+        self.winner = None
 
     def get_player(self, id):
         for player in self.players:
@@ -64,7 +67,7 @@ class Game(object):
 
         self.form_coalitions(intents) # Sends request to player to accept or reject
         self.battle(intents)
-        self.check_state()
+        return self.check_state()
 
     def battle(self, intents)-> List[Player]:
         """
@@ -74,9 +77,11 @@ class Game(object):
 
         losers = []
         for intent in intents:
+            player = self.get_player(intent.player)
+            target = self.get_player(intent.target)
+            if(target.status=="DEAD"): continue
+
             if intent.type == "battle":
-                player = self.get_player(intent.player)
-                target = self.get_player(intent.target)
                 if player.attack > target.attack:
                     target.status = "DEAD"
                     player.attack -= target.attack*LOSS_FACTOR
@@ -89,19 +94,33 @@ class Game(object):
         pass
 
     def check_state(self):
+        num_alive = 0
+        for player in self.players:
+            if player.status=="ALIVE":
+                num_alive += 1
+                self.winner = player.id
+        if num_alive <= 1:
+            return "DONE"
+        else:
+            return "RUNNING"
         pass
 
 
 def visualize(game):
+    for player in game.players:
+        print(vars(player))
     pass
 
 
 if __name__ == '__main__':
-    game = Game(3)
+    game = Game(PLAYERS)
 
+    print("Initial")
+    visualize(game)
     for step in range(STEPS):
         state = game.step()
-        print("Step "+str(step))
+        print("Step "+str(step+1))
         visualize(game)
-        if state == "win":
+        if state == "DONE":
+            print("The winner is: Player "+str(game.winner))
             break
