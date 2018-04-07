@@ -1,4 +1,5 @@
 from typing import List, Tuple
+STEPS = 10
 
 class Player(object):
     def __init__(self, id, attack=0):
@@ -48,6 +49,11 @@ class Game(object):
         self.players = [Player(i+1, 5) for i in range(players)]
         self.coalitions = None
 
+    def get_player(self, id):
+        for player in self.players:
+            if player.id==id:
+                return player
+
     def step(self):
         """
         One time step of the game
@@ -65,12 +71,16 @@ class Game(object):
         Simulates a battle
         :return: list(Player) Losers
         """
+
+        losers = []
         for intent in intents:
             if intent.type == "battle":
+                player = self.get_player(intent.player)
+                target = self.get_player(intent.target)
                 if player.attack > target.attack:
                     target.status = "DEAD"
                     player.attack -= target.attack*LOSS_FACTOR
-    
+
     def form_coalitions(self, intents):
         """
         Simulates coalition forming of players. Updates self.players()
@@ -88,8 +98,10 @@ def visualize(game):
 
 if __name__ == '__main__':
     game = Game(3)
-    while True:
+
+    for step in range(STEPS):
         state = game.step()
+        print("Step "+str(step))
         visualize(game)
         if state == "win":
             break
