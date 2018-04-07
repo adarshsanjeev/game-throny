@@ -4,6 +4,7 @@ class Player(object):
     def __init__(self, id, attack=0):
         self.id = id
         self.attack = attack
+        self.status = "ALIVE"
 
     def __add__(self, other: 'Player') -> 'Coalition':
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
@@ -41,6 +42,8 @@ class Intent(object):
         self.type = type # Type is the type of move
 
 class Game(object):
+    LOSS_FACTOR = 0.5
+
     def __init__(self, players = 2):
         self.players = [Player(i+1, 5) for i in range(players)]
         self.coalitions = None
@@ -64,8 +67,10 @@ class Game(object):
         """
         for intent in intents:
             if intent.type == "battle":
-                pass
-
+                if player.attack > target.attack:
+                    target.status = "DEAD"
+                    player.attack -= target.attack*LOSS_FACTOR
+    
     def form_coalitions(self, intents):
         """
         Simulates coalition forming of players. Updates self.players()
