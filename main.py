@@ -1,12 +1,18 @@
 import copy
 from typing import List, Tuple
+import random
+PLAYERS = 3
+STEPS = 10
+LOSS_FACTOR = 0.5
+GOLD_FACTOR = 0.5
 
 class Player(object):
-    def __init__(self, id, attack=0, gold=0):
+
+    def __init__(self, id, attack=0, gold=50):
         self.id = id
         self.attack = attack
         self.gold = gold
-        self.status = "alive"
+        self.status = "ALIVE"
 
     def __add__(self, other: 'Player') -> 'Coalition':
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
@@ -16,34 +22,33 @@ class Player(object):
         # Auro, this function --------
         # TODO: add a brain here. change later.
         # current suicide function
-        return Intent(self, self, "battle")
+        return Intent(self, self, "BATTLE")
 
     def __str__(self):
         return "Player %d: Attack: %d, Gold: %d, Status: %s" % (self.id, self.attack. self.gold, self.status)
 
+class Coalition(Player):
+    def __init__(self, players):
+        super().__init__()
+        self.players = players
 
-# class Coalition(Player):
-#     def __init__(self, players):
-#         super().__init__()
-#         self.players = players
-#
-#     def __getattribute__(self, item):
-#         aggregates = ['attack']
-#         if item in aggregates:
-#             attrs = self.aggregate_attr()
-#             return attrs[item]
-#         else:
-#             return object.__getattribute__(self, item)
-#
-#     def aggregate_attr(self):
-#         aggregates = ['attack']
-#         attrs = {}
-#         for i in aggregates:
-#             attrs[i] = sum([x.__dict__[i] for x in self.players])
-#         return attrs
-#
-#     def __str__(self):
-#         return ";".join([i.__str__() for i in self.players])
+    def __getattribute__(self, item):
+        aggregates = ['attack', 'gold']
+        if item in aggregates:
+            attrs = self.aggregate_attr()
+            return attrs[item]
+        else:
+            return object.__getattribute__(self, item)
+
+    def aggregate_attr(self):
+        aggregates = ['attack', 'gold']
+        attrs = {}
+        for i in aggregates:
+            attrs[i] = sum([x.__dict__[i] for x in self.players])
+        return attrs
+
+    def __str__(self):
+        return ";".join([i.__str__() for i in self.players])
 
 
 class Intent(object):
@@ -61,8 +66,14 @@ class Game(object):
     GOLD_GAIN_FACTOR  = 0.5
 
     def __init__(self, players = 2):
-        self.players = [Player(i+1, 5) for i in range(players)]
+        self.players = [Player(i+1, random.randint(10, 30)) for i in range(players)]
         self.coalitions = None
+        self.winner = None
+
+    def get_player(self, id):
+        for player in self.players:
+            if player.id==id:
+                return player
 
     def step(self):
         """
@@ -76,7 +87,7 @@ class Game(object):
 
         self.form_coalitions(intents) # Sends request to player to accept or reject
         self.battle(intents)
-        self.check_state()
+        return self.check_state()
 
     def battle(self, intents)-> List[Player]:
         """
@@ -84,12 +95,13 @@ class Game(object):
         :return: list(Player) Losers
         """
 
-        temp_players = copy.deepcopy(self.players)
-
         for intent in intents:
-            if intent.type == "battle":
+            player = self.get_player(intent.player)
+            target = self.get_player(intent.target)
+
+            if intent.type == "BATTLE":
                 if intent.player.attack > intent.target.attack:
-                    intent.target.status = "dead"
+                    intent.target.status = "DEAD"
                     intent.player.attack -= intent.target.attack*self.ATTACK_LOSS_FACTOR
                     intent.player.gold += intent.target.gold*self.GOLD_GAIN_FACTOR
                 else:
@@ -104,18 +116,33 @@ class Game(object):
         pass
 
     def check_state(self):
+        num_alive = 0
+        for player in self.players:
+            if player.status=="ALIVE":
+                num_alive += 1
+                self.winner = player.id
+        if num_alive <= 1:
+            return "DONE"
+        else:
+            return "RUNNING"
         pass
 
 
 def visualize(game):
+    for player in game.players:
+        print(vars(player))
     pass
 
 
 if __name__ == '__main__':
-    game = Game(3)
-    #while True:
-    for i in range(5):
+    game = Game(PLAYERS)
+
+    print("Initial")
+    visualize(game)
+    for step in range(STEPS):
         state = game.step()
+        print("Step "+str(step+1))
         visualize(game)
-        if state == "win":
+        if state == "DONE":
+            print("The winner is: Player "+str(game.winner))
             break
