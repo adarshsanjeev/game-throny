@@ -3,11 +3,13 @@ import random
 PLAYERS = 3
 STEPS = 10
 LOSS_FACTOR = 0.5
+GOLD_FACTOR = 0.5
 
 class Player(object):
-    def __init__(self, id, attack=0):
+    def __init__(self, id, attack=0, gold=50):
         self.id = id
         self.attack = attack
+        self.gold = gold
         self.status = "ALIVE"
 
     def __add__(self, other: 'Player') -> 'Coalition':
@@ -25,7 +27,7 @@ class Coalition(Player):
         self.players = players
 
     def __getattribute__(self, item):
-        aggregates = ['attack']
+        aggregates = ['attack', 'gold']
         if item in aggregates:
             attrs = self.aggregate_attr()
             return attrs[item]
@@ -33,7 +35,7 @@ class Coalition(Player):
             return object.__getattribute__(self, item)
 
     def aggregate_attr(self):
-        aggregates = ['attack']
+        aggregates = ['attack', 'gold']
         attrs = {}
         for i in aggregates:
             attrs[i] = sum([x.__dict__[i] for x in self.players])
@@ -84,7 +86,8 @@ class Game(object):
             if intent.type == "battle":
                 if player.attack > target.attack:
                     target.status = "DEAD"
-                    player.attack -= target.attack*LOSS_FACTOR
+                    player.gold += target.gold*GOLD_FACTOR
+                player.attack -= target.attack*LOSS_FACTOR
 
     def form_coalitions(self, intents):
         """
