@@ -1,10 +1,9 @@
 import copy
 from typing import List, Tuple
 import random
+
 PLAYERS = 3
-STEPS = 10
-LOSS_FACTOR = 0.5
-GOLD_FACTOR = 0.5
+STEPS = 1
 
 class Player(object):
 
@@ -22,10 +21,14 @@ class Player(object):
         # Auro, this function --------
         # TODO: add a brain here. change later.
         # current suicide function
-        return Intent(self, self, "BATTLE")
+        self_copy = copy.copy(self)
+        return Intent(self_copy, self_copy, "BATTLE")
 
     def __str__(self):
         return "Player %d: Attack: %d, Gold: %d, Status: %s" % (self.id, self.attack. self.gold, self.status)
+
+    def __eq__(self, other):
+        return self.id == other.id
 
 class Coalition(Player):
     def __init__(self, players):
@@ -62,11 +65,11 @@ class Intent(object):
 
 
 class Game(object):
-    ATTACK_LOSS_FACTOR = 0.5
-    GOLD_GAIN_FACTOR  = 0.5
+    ATTACK_LOSS_FACTOR = 0.4
+    GOLD_GAIN_FACTOR  = 0.6
 
     def __init__(self, players = 2):
-        self.players = [Player(i+1, random.randint(10, 30)) for i in range(players)]
+        self.players = [Player(i+1, float(random.randint(10, 30)) ) for i in range(players)]
         self.coalitions = None
         self.winner = None
 
@@ -96,17 +99,17 @@ class Game(object):
         """
 
         for intent in intents:
-            player = self.get_player(intent.player)
-            target = self.get_player(intent.target)
+            player = self.players[self.players.index(intent.player)]
+            target = self.players[self.players.index(intent.target)]
 
             if intent.type == "BATTLE":
                 if intent.player.attack > intent.target.attack:
-                    intent.target.status = "DEAD"
-                    intent.player.attack -= intent.target.attack*self.ATTACK_LOSS_FACTOR
-                    intent.player.gold += intent.target.gold*self.GOLD_GAIN_FACTOR
+                    target.status = "DEAD"
+                    player.attack -= intent.target.attack*self.ATTACK_LOSS_FACTOR
+                    player.gold += intent.target.gold*self.GOLD_GAIN_FACTOR
                 else:
-                    intent.player.attack -= intent.target.attack*self.ATTACK_LOSS_FACTOR
-                    intent.target.attack -= intent.player.attack*self.ATTACK_LOSS_FACTOR
+                    player.attack -= intent.target.attack*self.ATTACK_LOSS_FACTOR
+                    target.attack -= intent.player.attack*self.ATTACK_LOSS_FACTOR
 
     def form_coalitions(self, intents):
         """
