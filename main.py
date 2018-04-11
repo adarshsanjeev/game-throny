@@ -3,7 +3,7 @@ from typing import List, Tuple
 import random
 
 PLAYERS = 3
-STEPS = 1
+STEPS = 10
 
 class Player(object):
 
@@ -17,7 +17,7 @@ class Player(object):
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
         return Coalition([self, other])
 
-    def get_intent(self):
+    def get_intent(self, players, coalitions):
         # Auro, this function --------
         # TODO: add a brain here. change later.
         # current suicide function
@@ -84,7 +84,7 @@ class Game(object):
         :return:
         """
 
-        intents = [x.get_intent() for x in self.players]
+        intents = [x.get_intent(self.players, self.coalitions) for x in self.players]
         for intent in intents:
             print(intent)
 
