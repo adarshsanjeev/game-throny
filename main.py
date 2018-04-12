@@ -19,12 +19,8 @@ class Player(object):
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
         return Coalition([self, other])
 
-<<<<<<< HEAD
     def get_intent(self, players, coalitions):
         # Auro, this function --------
-=======
-    def get_intent(self):
->>>>>>> c05a90333045c56b97904e6e7ddcd5972012f1b7
         # TODO: add a brain here. change later.
         # current suicide function
         self_copy = copy.copy(self)
@@ -111,7 +107,7 @@ class Game(object):
                 player.peace_dict[i] -= 1
                 if player.peace_dict[i] == 0:
                     player.peace_dict.pop(i)
-    
+
     def battle(self, intents)-> List[Player]:
         """
         Simulates a battle
