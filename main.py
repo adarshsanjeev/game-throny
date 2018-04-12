@@ -41,6 +41,14 @@ class Player(object):
     def __eq__(self, other):
         return self.id == other.id
 
+    def set_peace(self, target, period=MAX_PEACE_PERIOD):
+        self.peace_dict[target.id] = period
+
+    def gain_gold(self, gold):
+        self.gold += gold
+
+    def suffer_loss(self, attack):
+        self.attack -= attack
 
 class Coalition(Player):
     def __init__(self, players):
@@ -70,6 +78,29 @@ class Coalition(Player):
             if other == p:
                 return True
         return False
+
+    def set_peace(self, target, period=MAX_PEACE_PERIOD):
+        if target.id == -1:
+            for t in target.players:
+                for player in self.players:
+                    player.peace_dict[t.id] = period
+        else:
+            for player in self.players:
+                player.peace_dict[target.id] = period
+
+    def gain_gold(self, gold):
+        att = self.attack
+        for player in self.players:
+            player.gold += gold*(player.attack/att)
+
+    def suffer_loss(self, attack):
+        att = self.attack
+        loss_list = []
+        for player in self.players:
+            loss_list.append(attack * (player.attack/att))
+        for i in range(len(self.players)):
+            self.players[i].attack = max(0, self.players[i].attack-loss_list[i])
+
 
 class Intent(object):
     def __init__(self, player, target, type, gold=0):
@@ -136,11 +167,11 @@ class Game(object):
             if intent.type == "BATTLE":
                 if intent.player.attack > intent.target.attack:
                     target.status = "DEAD"
-                    player.attack -= intent.target.attack*self.ATTACK_LOSS_FACTOR
-                    player.gold += intent.target.gold*self.GOLD_GAIN_FACTOR
+                    player.suffer_loss(intent.target.attack*self.ATTACK_LOSS_FACTOR)
+                    player.gain_gold(intent.target.gold*self.GOLD_GAIN_FACTOR)
                 else:
-                    player.attack -= intent.target.attack*self.ATTACK_LOSS_FACTOR
-                    target.attack -= intent.player.attack*self.ATTACK_LOSS_FACTOR
+                    player.suffer_loss(intent.target.attack*self.ATTACK_LOSS_FACTOR)
+                    target.suffer_loss(intent.player.attack*self.ATTACK_LOSS_FACTOR)
 
     def handle_peace(self, intents)-> List[Player]:
         """
@@ -155,8 +186,8 @@ class Game(object):
                 if target.request_peace(player) == True and player.gold >= intent.gold:
                     player.gold -= intent.gold
                     target.gold += intent.gold
-                    player.peace_dict[target.id] = MAX_PEACE_PERIOD
-                    target.peace_dict[player.id] = MAX_PEACE_PERIOD
+                    player.set_peace(target)
+                    target.set_peace(player)
 
     def form_coalitions(self, intents):
         """
