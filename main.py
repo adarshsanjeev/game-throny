@@ -22,7 +22,10 @@ class Player(object):
         # Auro, this function --------
         # TODO: add a brain here. change later.
         self_copy = copy.copy(self)
-        return [Intent(self_copy, Player(random.randint(1, PLAYERS)), "BATTLE", 0)]
+        while True:
+            x = Player(random.randint(1, PLAYERS))
+            if x.status=="ALIVE":
+                return [Intent(self_copy, Player(random.randint(1, PLAYERS)), "BATTLE", 0)]
 
     def __repr__(self):
         return "Player %d" % (self.id)
@@ -139,7 +142,12 @@ class Game(object):
         Strategy 1: Random pairs
         """
         for player in self.players:
-            Intent(copy.copy(player), Player(random.randint(1, PLAYERS)), "COAL")
+            flag = 0
+            while flag==0:
+                x = Player(random.randint(1, PLAYERS))
+                if x.status=="ALIVE":
+                    intents += [Intent(copy.copy(player), Player(random.randint(1, PLAYERS)), "COAL")]
+                    flag=1
 
 
         for intent in intents:
@@ -208,6 +216,7 @@ class Game(object):
             target = self.players[self.players.index(intent.target)]
 
             if intent.type == "COAL":
+                print(player, target, " are together now")
                 if target.request_coal(player) == True:
                     self.players.remove(player)
                     self.players.remove(target)
@@ -240,7 +249,7 @@ if __name__ == '__main__':
     for step in range(STEPS):
         state = game.step()
         print("Step "+str(step+1))
-        # visualize(game)
+        visualize(game)
         if state == "DONE":
             print("The winner is: Player "+str(game.winner))
             break
