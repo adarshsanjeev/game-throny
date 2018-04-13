@@ -24,8 +24,8 @@ class Player(object):
         # current suicide function
         self_copy = copy.copy(self)
         if self.id == 1:
-            return Intent(self_copy, Player(2), "COAL")
-        return Intent(self_copy, self_copy, "PEACE", 10)
+            return [Intent(self_copy, Player(2), "COAL")]
+        return [Intent(self_copy, self_copy, "PEACE", 10)]
 
     def __repr__(self):
         return "Player %d" % (self.id)
@@ -133,8 +133,9 @@ class Game(object):
         One time step of the game
         :return:
         """
-
-        intents = [x.get_intent(self.players, self.coalitions) for x in self.players]
+        intents = []
+        for x in self.players:
+            intents += x.get_intent(self.players, self.coalitions)
         for intent in intents:
             print(intent)
 
