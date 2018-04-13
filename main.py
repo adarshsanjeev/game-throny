@@ -3,7 +3,7 @@ from typing import List, Tuple
 import random
 
 MAX_PEACE_PERIOD = 3
-PLAYERS = 3
+PLAYERS = 5
 STEPS = 10
 
 class Player(object):
@@ -21,11 +21,8 @@ class Player(object):
     def get_intent(self, players, coalitions):
         # Auro, this function --------
         # TODO: add a brain here. change later.
-        # current suicide function
         self_copy = copy.copy(self)
-        if self.id == 1:
-            return [Intent(self_copy, Player(2), "COAL")]
-        return [Intent(self_copy, self_copy, "PEACE", 10)]
+        return [Intent(self_copy, Player(random.randint(1, PLAYER)), "BATTLE", 0)]
 
     def __repr__(self):
         return "Player %d" % (self.id)
@@ -136,6 +133,15 @@ class Game(object):
         intents = []
         for x in self.players:
             intents += x.get_intent(self.players, self.coalitions)
+
+        """
+        Add COAL intents here.
+        Strategy 1: Random pairs
+        """
+        for player in self.players:
+            Intent(self_copy, Player(random.randint(1, PLAYER)), "COAL")
+
+
         for intent in intents:
             print(intent)
 
