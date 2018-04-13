@@ -22,7 +22,7 @@ class Player(object):
         # Auro, this function --------
         # TODO: add a brain here. change later.
         self_copy = copy.copy(self)
-        return [Intent(self_copy, Player(random.randint(1, PLAYER)), "BATTLE", 0)]
+        return [Intent(self_copy, Player(random.randint(1, PLAYERS)), "BATTLE", 0)]
 
     def __repr__(self):
         return "Player %d" % (self.id)
@@ -139,7 +139,7 @@ class Game(object):
         Strategy 1: Random pairs
         """
         for player in self.players:
-            Intent(self_copy, Player(random.randint(1, PLAYER)), "COAL")
+            Intent(copy.copy(player), Player(random.randint(1, PLAYERS)), "COAL")
 
 
         for intent in intents:
