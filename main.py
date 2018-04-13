@@ -1,6 +1,8 @@
 import copy
-from typing import List, Tuple
 import random
+from typing import List
+
+from tabulate import tabulate
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
@@ -160,6 +162,12 @@ class Game(object):
         return self.check_state()
 
     def end_of_turn_calcs(self):
+        def splitplayer(player):
+            if type(player) == Player:
+                return player
+            else:
+                return [splitplayer(x) for x in player.players]
+
         for player in self.players:
             for i in player.peace_dict:
                 player.peace_dict[i] -= 1
@@ -168,7 +176,7 @@ class Game(object):
         for player in self.players:
             if player.id == -1:
                 self.players.remove(player)
-                self.players += player.players
+                self.players += splitplayer(player)
 
     def battle(self, intents)-> List[Player]:
         """
@@ -237,9 +245,7 @@ class Game(object):
 
 
 def visualize(game):
-    for player in game.players:
-        print(vars(player))
-
+    print(tabulate([vars(x) for x in game.players]))
 
 if __name__ == '__main__':
     game = Game(PLAYERS)
