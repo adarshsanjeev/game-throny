@@ -32,8 +32,8 @@ class Player(object):
     def __repr__(self):
         return "Player %d" % (self.id)
 
-    def __str__(self):
-        return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (self.id, self.attack. self.gold, self.status, str(self.peace_dict))
+    #def __str__(self):
+    #    return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (self.id, self.attack. self.gold, self.status, str(self.peace_dict))
 
     def request_peace(self, player):
         return True
@@ -93,11 +93,13 @@ class Coalition(Player):
 
     def gain_gold(self, gold):
         att = self.attack
+        if att==0: att=1
         for player in self.players:
             player.gold += gold*(player.attack/att)
 
     def suffer_loss(self, attack):
         att = self.attack
+        if att==0: att=1
         loss_list = []
         for player in self.players:
             loss_list.append(attack * (player.attack/att))
@@ -143,6 +145,7 @@ class Game(object):
         Add COAL intents here.
         Strategy 1: Random pairs
         """
+
         for player in self.players:
             flag = 0
             while flag==0:
@@ -164,9 +167,12 @@ class Game(object):
     def end_of_turn_calcs(self):
         def splitplayer(player):
             if type(player) == Player:
-                return player
+                return [player]
             else:
-                return [splitplayer(x) for x in player.players]
+                list = []
+                for x in player.players:
+                    list.extend(splitplayer(x))
+                return list
 
         for player in self.players:
             for i in player.peace_dict:
@@ -176,7 +182,8 @@ class Game(object):
         for player in self.players:
             if player.id == -1:
                 self.players.remove(player)
-                self.players += splitplayer(player)
+                print(splitplayer(player))
+                self.players.extend(splitplayer(player))
 
     def battle(self, intents)-> List[Player]:
         """
@@ -224,11 +231,18 @@ class Game(object):
             target = self.players[self.players.index(intent.target)]
 
             if intent.type == "COAL":
-                print(player, target, " are together now")
+                if self.players.index(intent.player) == self.players.index(intent.target) or len(self.players)==2:
+                    print("Can't coalesce into one")
+                    continue
+                print(player, target, " wanna join")
                 if target.request_coal(player) == True:
                     self.players.remove(player)
                     self.players.remove(target)
                     self.players.append(player+target)
+
+                for player in self.players:
+                    print(player, " | ", end='')
+                print(" is after the coalition")
 
 
     def check_state(self):
@@ -255,7 +269,7 @@ if __name__ == '__main__':
     for step in range(STEPS):
         state = game.step()
         print("Step "+str(step+1))
-        visualize(game)
+        #visualize(game)
         if state == "DONE":
             print("The winner is: Player "+str(game.winner))
             break
