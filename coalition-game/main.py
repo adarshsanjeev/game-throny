@@ -20,20 +20,21 @@ class Player(object):
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
         return Coalition([self, other])
 
-    def get_intent(self, players, coalitions):
+    def get_intent(self, players):
         # Auro, this function --------
         # TODO: add a brain here. change later.
+        players = [i for i in players if i.status == "ALIVE" ]
         self_copy = copy.copy(self)
         while True:
             x = Player(random.randint(1, PLAYERS))
             if x.status=="ALIVE":
-                return [Intent(self_copy, Player(random.randint(1, PLAYERS)), "BATTLE", 0)]
+                return Intent(self_copy, Player(random.randint(1, PLAYERS)), "BATTLE", 0)
 
     def __repr__(self):
         return "Player %d" % (self.id)
 
-    #def __str__(self):
-    #    return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (self.id, self.attack. self.gold, self.status, str(self.peace_dict))
+    def __str__(self):
+        return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (self.id, self.attack, self.gold, self.status, str(self.peace_dict))
 
     def request_peace(self, player):
         return True
@@ -124,7 +125,6 @@ class Game(object):
 
     def __init__(self, players = 2):
         self.players = [Player(i+1, float(random.randint(10, 30)) ) for i in range(players)]
-        self.coalitions = None
         self.winner = None
 
     def get_player(self, id):
@@ -139,7 +139,8 @@ class Game(object):
         """
         intents = []
         for x in self.players:
-            intents += x.get_intent(self.players, self.coalitions)
+            if x.status == "ALIVE":
+                intents += [x.get_intent(self.players)]
 
         """
         Add COAL intents here.

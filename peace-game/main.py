@@ -17,19 +17,24 @@ class Player(object):
         self.peace_dict = {}
 
     def get_intent(self, players):
-        # Auro, this function --------
-        # TODO: add a brain here. change later.
-        self_copy = copy.copy(self)
-        while True:
-            x = Player(random.randint(1, PLAYERS))
-            if x.status=="ALIVE":
-                return [Intent(self_copy, Player(random.randint(1, PLAYERS)), "BATTLE", 0)]
+        temp = list(self.peace_dict.keys()) + [self.id]
+        players = [i for i in players if i.status == "ALIVE" ]
+        possible_targets = list(filter(lambda x: x.id not in temp, players))
+        print(self.id, "CAN TARGET" , possible_targets)
+        if len(possible_targets) == 0:
+            return None
+        target = random.choice(possible_targets)
+        if target.attack > self.attack:
+            intent = "PEACE"
+        else:
+            intent = "BATTLE"
+        return Intent(copy.copy(self), target, intent)
 
     def __repr__(self):
         return "Player %d" % (self.id)
 
-    #def __str__(self):
-    #    return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (self.id, self.attack. self.gold, self.status, str(self.peace_dict))
+    def __str__(self):
+        return "Player %d: Attack: %f, Gold: %f, Status: %s, In peace with: %s" % (self.id, self.attack, self.gold, self.status, str(self.peace_dict))
 
     def request_peace(self, player):
         return True
@@ -70,6 +75,24 @@ class Game(object):
             if player.id==id:
                 return player
 
+    def validate_intents(self, intents):
+        possible_targets = [i for i in self.players if i.status == "ALIVE" ]
+        for intent in intents:
+            p = possible_targets[possible_targets.index(intent.player)]
+            if intent.gold > p.gold:
+                print ("Not enough gold")
+                return False
+            if intent.player == intent.target:
+                print ("Target is same as player")
+                return False
+            if intent.target not in possible_targets:
+                print ("Not possible intent")
+                return False
+            if intent.type not in ["BATTLE", "PEACE"]:
+                print ("Unknown intent")
+                return False
+        return True
+
     def step(self):
         """
         One time step of the game
@@ -77,10 +100,17 @@ class Game(object):
         """
         intents = []
         for x in self.players:
-            intents += x.get_intent(self.players)
+            if x.status == "ALIVE":
+                intent = x.get_intent(self.players)
+                if intent is not None:
+                    intents += [intent]
 
         for intent in intents:
             print(intent)
+
+        if self.validate_intents(intents) == False:
+            print("Incorrect intents")
+            return self.check_state()
 
         self.battle(intents)
         self.handle_peace(intents)
@@ -88,12 +118,14 @@ class Game(object):
         return self.check_state()
 
     def end_of_turn_calcs(self):
-
         for player in self.players:
+            players_to_remove = []
             for i in player.peace_dict:
                 player.peace_dict[i] -= 1
                 if player.peace_dict[i] == 0:
-                    player.peace_dict.pop(i)
+                    players_to_remove.append(i)
+            for i in players_to_remove:
+                player.peace_dict.pop(i)
 
     def battle(self, intents)-> List[Player]:
         """
@@ -150,7 +182,7 @@ if __name__ == '__main__':
     game = Game(PLAYERS)
 
     print("Initial")
-    visualize(game)
+    # visualize(game)
     for step in range(STEPS):
         state = game.step()
         print("Step "+str(step+1))
