@@ -1,0 +1,9 @@
+random = {
+    "attack": {
+
+    },
+    "coal": {
+
+    }
+
+}
