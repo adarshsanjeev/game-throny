@@ -2,6 +2,7 @@ import copy
 import random
 from typing import List
 
+import initials
 from tabulate import tabulate
 
 MAX_PEACE_PERIOD = 3
@@ -20,15 +21,16 @@ class Player(object):
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
         return Coalition([self, other])
 
-    def get_intent(self, players):
+    def get_intent(self, game):
+        players = game.players
         # Auro, this function --------
         # TODO: add a brain here. change later.
         players = [i for i in players if i.status == "ALIVE" ]
         self_copy = copy.copy(self)
         while True:
-            x = Player(random.randint(1, PLAYERS))
+            x = Player(random.randint(1, len(game.players)))
             if x.status=="ALIVE":
-                return Intent(self_copy, Player(random.randint(1, PLAYERS)), "BATTLE", 0)
+                return Intent(self_copy, Player(random.randint(1, len(game.players))), "BATTLE", 0)
 
     def __repr__(self):
         return "Player %d" % (self.id)
@@ -53,6 +55,15 @@ class Player(object):
 
     def suffer_loss(self, attack):
         self.attack -= attack
+
+    def get_coal_intent(self, game):
+        # random
+        target = random.choice(list(filter(lambda x: x.status == "ALIVE", game.players)))
+        return Intent(copy.copy(self), target, "COAL")
+
+
+def deserialize_players(inp):
+    return [Player(x['id'], attack=x['attack'], gold=x['gold']) for x in inp]
 
 class Coalition(Player):
     def __init__(self, players):
@@ -123,8 +134,8 @@ class Game(object):
     ATTACK_LOSS_FACTOR = 0.4
     GOLD_GAIN_FACTOR  = 0.6
 
-    def __init__(self, players = 2):
-        self.players = [Player(i+1, float(random.randint(10, 30)) ) for i in range(players)]
+    def __init__(self, players=initials.plain):
+        self.players = players
         self.winner = None
 
     def get_player(self, id):
@@ -140,21 +151,17 @@ class Game(object):
         intents = []
         for x in self.players:
             if x.status == "ALIVE":
-                intents += [x.get_intent(self.players)]
+                intents += [x.get_intent(self)]
 
         """
         Add COAL intents here.
         Strategy 1: Random pairs
         """
+        # @auro TODO: Aren't coal intents after battling?, not at the same time
 
-        for player in self.players:
-            flag = 0
-            while flag==0:
-                x = Player(random.randint(1, PLAYERS))
-                if x.status=="ALIVE":
-                    intents += [Intent(copy.copy(player), Player(random.randint(1, PLAYERS)), "COAL")]
-                    flag=1
+        coal_intents = [x.get_coal_intent(self) for x in filter(lambda x: x.status == "ALIVE", self.players)]
 
+        intents += coal_intents
 
         for intent in intents:
             print(intent)
@@ -263,6 +270,18 @@ def visualize(game):
     print(tabulate([vars(x) for x in game.players]))
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Describe your game')
+    parser.add_argument('--playermodel', type=str,
+                        help='Pick one of the predefined player models: ' + "\n".join(dir(initials)))
+    parser.add_argument('--strategymodel', type=str,
+                        help='Pick one of the predefined strategy models')
+
+    args = parser.parse_args()
+
+    PLAYERS = deserialize_players(initials.__dict__[args.playermodel])
+
     game = Game(PLAYERS)
 
     print("Initial")
