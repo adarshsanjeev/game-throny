@@ -9,6 +9,7 @@ MAX_PEACE_PERIOD = 3
 PLAYERS = 5
 STEPS = 10
 
+
 class Player(object):
     def __init__(self, id, attack=0, gold=50):
         self.id = id
@@ -25,18 +26,19 @@ class Player(object):
         players = game.players
         # Auro, this function --------
         # TODO: add a brain here. change later.
-        players = [i for i in players if i.status == "ALIVE" ]
+        players = [i for i in players if i.status == "ALIVE"]
         self_copy = copy.copy(self)
         while True:
             x = Player(random.randint(1, len(game.players)))
-            if x.status=="ALIVE":
+            if x.status == "ALIVE":
                 return Intent(self_copy, Player(random.randint(1, len(game.players))), "BATTLE", 0)
 
     def __repr__(self):
         return "Player %d" % (self.id)
 
     def __str__(self):
-        return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (self.id, self.attack, self.gold, self.status, str(self.peace_dict))
+        return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (
+            self.id, self.attack, self.gold, self.status, str(self.peace_dict))
 
     def request_peace(self, player):
         return True
@@ -64,6 +66,7 @@ class Player(object):
 
 def deserialize_players(inp):
     return [Player(x['id'], attack=x['attack'], gold=x['gold']) for x in inp]
+
 
 class Coalition(Player):
     def __init__(self, players):
@@ -105,34 +108,35 @@ class Coalition(Player):
 
     def gain_gold(self, gold):
         att = self.attack
-        if att==0: att=1
+        if att == 0: att = 1
         for player in self.players:
-            player.gold += gold*(player.attack/att)
+            player.gold += gold * (player.attack / att)
 
     def suffer_loss(self, attack):
         att = self.attack
-        if att==0: att=1
+        if att == 0: att = 1
         loss_list = []
         for player in self.players:
-            loss_list.append(attack * (player.attack/att))
+            loss_list.append(attack * (player.attack / att))
         for i in range(len(self.players)):
-            self.players[i].attack = max(0, self.players[i].attack-loss_list[i])
+            self.players[i].attack = max(0, self.players[i].attack - loss_list[i])
 
 
 class Intent(object):
     def __init__(self, player, target, type, gold=0):
         self.player = player
         self.target = target
-        self.type = type # Type is the type of move
+        self.type = type  # Type is the type of move
         self.gold = gold
 
     def __str__(self):
-        return "Player %d targets %d with intent %s with tribute %d" % (self.player.id, self.target.id, self.type, self.gold)
+        return "Player %d targets %d with intent %s with tribute %d" % (
+            self.player.id, self.target.id, self.type, self.gold)
 
 
 class Game(object):
     ATTACK_LOSS_FACTOR = 0.4
-    GOLD_GAIN_FACTOR  = 0.6
+    GOLD_GAIN_FACTOR = 0.6
 
     def __init__(self, players=initials.plain):
         self.players = players
@@ -140,7 +144,7 @@ class Game(object):
 
     def get_player(self, id):
         for player in self.players:
-            if player.id==id:
+            if player.id == id:
                 return player
 
     def step(self):
@@ -166,7 +170,7 @@ class Game(object):
         for intent in intents:
             print(intent)
 
-        self.form_coalitions(intents) # Sends request to player to accept or reject
+        self.form_coalitions(intents)  # Sends request to player to accept or reject
         self.battle(intents)
         self.handle_peace(intents)
         self.end_of_turn_calcs()
@@ -193,7 +197,7 @@ class Game(object):
                 print(splitplayer(player))
                 self.players.extend(splitplayer(player))
 
-    def battle(self, intents)-> List[Player]:
+    def battle(self, intents) -> List[Player]:
         """
         Simulates a battle
         :return: list(Player) Losers
@@ -206,13 +210,13 @@ class Game(object):
             if intent.type == "BATTLE":
                 if intent.player.attack > intent.target.attack:
                     target.status = "DEAD"
-                    player.suffer_loss(intent.target.attack*self.ATTACK_LOSS_FACTOR)
-                    player.gain_gold(intent.target.gold*self.GOLD_GAIN_FACTOR)
+                    player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
+                    player.gain_gold(intent.target.gold * self.GOLD_GAIN_FACTOR)
                 else:
-                    player.suffer_loss(intent.target.attack*self.ATTACK_LOSS_FACTOR)
-                    target.suffer_loss(intent.player.attack*self.ATTACK_LOSS_FACTOR)
+                    player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
+                    target.suffer_loss(intent.player.attack * self.ATTACK_LOSS_FACTOR)
 
-    def handle_peace(self, intents)-> List[Player]:
+    def handle_peace(self, intents) -> List[Player]:
         """
         Simulates peace
         """
@@ -239,24 +243,23 @@ class Game(object):
             target = self.players[self.players.index(intent.target)]
 
             if intent.type == "COAL":
-                if self.players.index(intent.player) == self.players.index(intent.target) or len(self.players)==2:
+                if self.players.index(intent.player) == self.players.index(intent.target) or len(self.players) == 2:
                     print("Can't coalesce into one")
                     continue
                 print(player, target, " wanna join")
                 if target.request_coal(player) == True:
                     self.players.remove(player)
                     self.players.remove(target)
-                    self.players.append(player+target)
+                    self.players.append(player + target)
 
                 for player in self.players:
                     print(player, " | ", end='')
                 print(" is after the coalition")
 
-
     def check_state(self):
         num_alive = 0
         for player in self.players:
-            if player.status=="ALIVE":
+            if player.status == "ALIVE":
                 num_alive += 1
                 self.winner = player.id
         if num_alive <= 1:
@@ -268,6 +271,7 @@ class Game(object):
 
 def visualize(game):
     print(tabulate([vars(x) for x in game.players]))
+
 
 if __name__ == '__main__':
     import argparse
@@ -288,11 +292,11 @@ if __name__ == '__main__':
     visualize(game)
     for step in range(STEPS):
         state = game.step()
-        print("Step "+str(step+1))
-        #visualize(game)
+        print("Step " + str(step + 1))
+        # visualize(game)
         if state == "DONE":
             if game.winner is None:
                 print("All players died")
             else:
-                print("The winner is: Player "+str(game.winner))
+                print("The winner is: Player " + str(game.winner))
             break
