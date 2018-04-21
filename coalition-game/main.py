@@ -28,10 +28,8 @@ class Player(object):
         # TODO: add a brain here. change later.
         players = [i for i in players if i.status == "ALIVE"]
         self_copy = copy.copy(self)
-        while True:
-            x = Player(random.randint(1, len(game.players)))
-            if x.status == "ALIVE":
-                return Intent(self_copy, Player(random.randint(1, len(game.players))), "BATTLE", 0)
+        target = random.choice(list(filter(lambda x: x.status == "ALIVE", game.players)))
+        return Intent(self_copy, target, "BATTLE", 0)
 
     def __repr__(self):
         return "Player %d" % (self.id)
@@ -140,6 +138,7 @@ class Game(object):
 
     def __init__(self, players=initials.plain):
         self.players = players
+        self.dead_players = []
         self.winner = None
 
     def get_player(self, id):
