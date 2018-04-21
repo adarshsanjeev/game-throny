@@ -277,9 +277,9 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Describe your game')
-    parser.add_argument('--playermodel', type=str,
+    parser.add_argument('playermodel', type=str,
                         help='Pick one of the predefined player models: ' + "\n".join(dir(initials)))
-    parser.add_argument('--strategymodel', type=str,
+    parser.add_argument('strategymodel', type=str,
                         help='Pick one of the predefined strategy models')
 
     args = parser.parse_args()
