@@ -51,6 +51,14 @@ class Player(object):
     def suffer_loss(self, attack):
         self.attack -= attack
 
+class HumanPlayer(Player):
+    def get_intent(self):
+        line = input().split(" ")
+        intent = Intent(Player(self.id), Player(int(line[1])), line[0])
+        if len(line) > 2:
+            intent.gold = int(line[2])
+        return intent
+
 class Intent(object):
     def __init__(self, player, target, type, gold=0):
         self.player = player
@@ -88,7 +96,7 @@ class Game(object):
             if intent.target not in possible_targets:
                 print ("Not possible intent")
                 return False
-            if intent.type not in ["BATTLE", "PEACE"]:
+            if intent.type not in ["BATTLE", "PEACE", "FORTIFY"]:
                 print ("Unknown intent")
                 return False
         return True
@@ -111,6 +119,15 @@ class Game(object):
         if self.validate_intents(intents) == False:
             print("Incorrect intents")
             return self.check_state()
+
+        for intent in intents:
+            if intent.type == "FORTIFY":
+                player = self.players[self.players.index(intent.player)]
+                if player.gold < 10:
+                    print("Not enough gold")
+                else:
+                    player.gold -= 10
+                    player.attack += 20
 
         self.battle(intents)
         self.handle_peace(intents)
