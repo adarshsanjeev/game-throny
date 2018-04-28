@@ -1,14 +1,50 @@
 import copy
 import random
 from typing import List
-
+from IPython import get_ipython
+import ipdb
 from tabulate import tabulate
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
 STEPS = 10
 
+ipython = get_ipython()
+
+ipython.magic("%load_ext autoreload")
+ipython.magic("%autoreload 2")
+
+def simulate_move(game, intent):
+    clone = copy.deepcopy(game)
+    clone.battle([intent])
+    return clone
+
+
 class Player(object):
+    def getScore(self, game):
+        players = len(game.players)
+        players_007 = len([i for i in game.players if i.attack > self.attack])
+        coefficients = {
+            'attack': lambda x:5,
+            'gold': lambda x:10,
+            # 'peace_dict': lambda x:len(x)
+        }
+        self_score = sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
+        return players + players_007 + self_score
+
+    def utility(self, game, intent):
+        a = self.getScore(game)
+        print("updated")
+        game_clone = simulate_move(game, intent)
+        b = self.getScore(game_clone)
+        ipdb.set_trace()
+
+        return a-b
+        # num players
+        # no of player who can kill
+        # your own stats
+        # probability of being attacked
+
     def __init__(self, id, attack=0, gold=50):
         self.id = id
         self.attack = attack
