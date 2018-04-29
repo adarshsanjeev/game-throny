@@ -1,9 +1,13 @@
 import copy
 import random
-from typing import List
 
 import initials
+from IPython import get_ipython
 from tabulate import tabulate
+
+ipython = get_ipython()
+ipython.magic("%load_ext autoreload")
+ipython.magic("%autoreload 2")
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
@@ -20,7 +24,16 @@ class Player(object):
 
     def __add__(self, other: 'Player') -> 'Coalition':
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
-        return Coalition([self, other])
+        player_list = []
+        if type(self) == Coalition:
+            player_list += self.players
+        else:
+            player_list += [self]
+        if type(other) == Coalition:
+            player_list += other.players
+        else:
+            player_list += [other]
+        return Coalition(player_list)
 
     def get_intent(self, game):
         players = game.players
@@ -95,6 +108,7 @@ class Coalition(Player):
                 return True
         return False
 
+
     def set_peace(self, target, period=MAX_PEACE_PERIOD):
         if target.id == -1:
             for t in target.players:
@@ -151,6 +165,7 @@ class Game(object):
         One time step of the game
         :return:
         """
+        self.form_coalitions()  # Sends request to player to accept or reject
         intents = []
         for x in self.players:
             if x.status == "ALIVE":
@@ -162,16 +177,13 @@ class Game(object):
         """
         # @auro TODO: Aren't coal intents after battling?, not at the same time
 
-        coal_intents = [x.get_coal_intent(self) for x in filter(lambda x: x.status == "ALIVE", self.players)]
+        # coal_intents = [x.get_coal_intent(self) for x in filter(lambda x: x.status == "ALIVE", self.players)]
 
-        intents += coal_intents
+        # intents += coal_intents
 
-        for intent in intents:
-            print(intent)
-
-        self.form_coalitions(intents)  # Sends request to player to accept or reject
+        # self.form_coalitions(intents)  # Sends request to player to accept or reject
         self.battle(intents)
-        self.handle_peace(intents)
+        # self.handle_peace(intents)
         self.end_of_turn_calcs()
         return self.check_state()
 
@@ -185,18 +197,20 @@ class Game(object):
                     list.extend(splitplayer(x))
                 return list
 
-        for player in self.players:
-            for i in player.peace_dict:
-                player.peace_dict[i] -= 1
-                if player.peace_dict[i] == 0:
-                    player.peace_dict.pop(i)
+        #
+        # for player in self.players:
+        #     for i in player.peace_dict:
+        #         player.peace_dict[i] -= 1
+        #         if player.peace_dict[i] == 0:
+        #             player.peace_dict.pop(i)
         for player in self.players:
             if player.id == -1:
                 self.players.remove(player)
-                print(splitplayer(player))
                 self.players.extend(splitplayer(player))
 
-    def battle(self, intents) -> List[Player]:
+        print(self.players)
+
+    def battle(self, intents):
         """
         Simulates a battle
         :return: list(Player) Losers
@@ -215,53 +229,74 @@ class Game(object):
                     player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
                     target.suffer_loss(intent.player.attack * self.ATTACK_LOSS_FACTOR)
 
-    def handle_peace(self, intents) -> List[Player]:
-        """
-        Simulates peace
-        """
+    def form_coal_intents(self):
+        #     init_list = copy.deepcopy(self.players) #[1, 2, 3, 4, 5]
+        #     init_list = random.shuffle(init_list)
+        #     groups = []
+        #     for i in range(int(len(init_list)/5)):
+        #         acc = []
+        #         for j in range(5):
+        #             try:
+        #                 acc.append(init_list[i+j])
+        #             except:
+        #                 break
+        #         groups.append(acc)
+        #
+        #     self.players = [sum(x) for x in groups]
+        #     final_list = init_list #[1, [2, 3], [4, 5]]
+        #
+        #     for coal in final_list:
+        #         if len(coal) > 1:
+        #             for i in range(0, len(coal)-1):
+        #                 intents+=intent("COAL", i, coal[len(coal)]-1)
+        pass
 
-        for intent in intents:
-            player = self.players[self.players.index(intent.player)]
-            target = self.players[self.players.index(intent.target)]
-
-            if intent.type == "PEACE":
-                if target.request_peace(player) == True and player.gold >= intent.gold:
-                    player.gold -= intent.gold
-                    target.gold += intent.gold
-                    player.set_peace(target)
-                    target.set_peace(player)
-
-    def form_coalitions(self, intents):
+    # def form_coalitions(self, intents):
+    def form_coalitions(self):
         """
         Simulates coalition forming of players. Updates self.players()
         :return:
         """
+        if len(self.players) <= 10: return
+        init_list = copy.deepcopy(self.players)
+        random.shuffle(init_list)
+        groups = []
+        for i in range(int(len(init_list) / 5)):
+            acc = []
+            for j in range(5):
+                try:
+                    acc.append(init_list[i * 5 + j])
+                except:
+                    break
+            groups.append(acc)
+        self.players = [sum(x[1:], x[0]) if len(x) > 1 else x[0] for x in groups]
 
-        for intent in intents:
-            player = self.players[self.players.index(intent.player)]
-            target = self.players[self.players.index(intent.target)]
-
-            if intent.type == "COAL":
-                if self.players.index(intent.player) == self.players.index(intent.target) or len(self.players) == 2:
-                    print("Can't coalesce into one")
-                    continue
-                print(player, target, " wanna join")
-                if target.request_coal(player) == True:
-                    self.players.remove(player)
-                    self.players.remove(target)
-                    self.players.append(player + target)
-
-                for player in self.players:
-                    print(player, " | ", end='')
-                print(" is after the coalition")
+        # for intent in intents:
+        #     player = self.players[self.players.index(intent.player)]
+        #     target = self.players[self.players.index(intent.target)]
+        #
+        #     if intent.type == "COAL":
+        #         if self.players.index(intent.player) == self.players.index(intent.target) or len(self.players) == 2:
+        #             print("Can't coalesce into one")
+        #             continue
+        #         print(player, target, " wanna join")
+        #         if target.request_coal(player) == True:
+        #             self.players.remove(player)
+        #             self.players.remove(target)
+        #             self.players.append(player + target)
+        #
+        #         for player in self.players:
+        #             print(player, " | ", end='')
+        #         print(" is after the coalition")
 
     def check_state(self):
         num_alive = 0
-        for player in self.players:
-            if player.status == "ALIVE":
-                num_alive += 1
-                self.winner = player.id
-        if num_alive <= 1:
+        dead_players = list(filter(lambda x: x.status == "DEAD", self.players))
+        alive_players = list(filter(lambda x: x.status == "ALIVE", self.players))
+        self.winner = alive_players[0].id
+        self.dead_players += dead_players
+        self.players = alive_players
+        if len(alive_players) <= 1:
             return "DONE"
         else:
             return "RUNNING"
