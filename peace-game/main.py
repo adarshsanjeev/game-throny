@@ -20,15 +20,16 @@ def simulate_move(game, intent):
 
 class Player(object):
     def getScore(self, game):
-        players = len(game.players)
-        players_007 = len([i for i in game.players if i.attack > self.attack])
+        alive_players = [i for i in game.players if i.status == "ALIVE"]
+        players = len(alive_players)
+        players_007 = len([i for i in alive_players if i.attack > self.attack])
         coefficients = {
             'attack': lambda x:5,
-            'gold': lambda x:10,
+            'gold': lambda x:5,
             # 'peace_dict': lambda x:len(x)
         }
         self_score = sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
-        return players + players_007 + self_score
+        return players + players_007*(-0.2) + self_score
 
     def utility(self, game, intent):
         # num players
@@ -205,12 +206,14 @@ class Game(object):
         Simulates a battle
         :return: list(Player) Losers
         """
-
+        random.shuffle(intents)
         for intent in intents:
             player = self.players[self.players.index(intent.player)]
             target = self.players[self.players.index(intent.target)]
 
             if intent.type == "BATTLE":
+                if intent.target.attack == "DEAD":
+                    continue
                 if intent.player.attack > intent.target.attack:
                     target.status = "DEAD"
                     player.suffer_loss(intent.target.attack*self.ATTACK_LOSS_FACTOR)
