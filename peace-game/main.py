@@ -29,7 +29,7 @@ def simulate_move(game, intent):
 
 class Player(object):
     def getScore(self, game):
-        coeffs = [-0.1, -1, 1]
+        coeffs = [0.1, 1, -1]
         alive_players = [i for i in game.players if i.status == "ALIVE"]
         players = len(alive_players)
         players_007 = len([i for i in alive_players if i.attack > self.attack])
@@ -49,7 +49,7 @@ class Player(object):
         a = self.getScore(game)
         game_clone = simulate_move(game, intent)
         b = self.getScore(game_clone)
-        return a-b
+        return b-a
 
     def __init__(self, id, attack=0, gold=50):
         self.id = id
@@ -123,11 +123,8 @@ class RandomPlayer(Player):
         if len(possible_targets) == 0:
             return None
         target = random.choice(possible_targets)
-        if target.attack > self.attack:
-            if len(players) > 2:
-                intent = "PEACE"
-            else:
-                intent = "BATTLE"
+        if random.randint(0, 1)==0:
+            intent = "PEACE"
         else:
             intent = "BATTLE"
         return Intent(copy.copy(self), target, intent)
