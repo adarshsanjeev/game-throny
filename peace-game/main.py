@@ -1,18 +1,18 @@
 import copy
 import random
 from typing import List
-from IPython import get_ipython
+#from IPython import get_ipython
 from tabulate import tabulate
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
 STEPS = 100
-win = 0
+win = [0,0,0,0,0]
 
-ipython = get_ipython()
+#ipython = get_ipython()
 
-ipython.magic("%load_ext autoreload")
-ipython.magic("%autoreload 2")
+#ipython.magic("%load_ext autoreload")
+#ipython.magic("%autoreload 2")
 
 def simulate_move(game, intent):
     clone = copy.deepcopy(game)
@@ -49,7 +49,7 @@ class Player(object):
         a = self.getScore(game)
         game_clone = simulate_move(game, intent)
         b = self.getScore(game_clone)
-        return b-a
+        return a-b
 
     def __init__(self, id, attack=0, gold=50):
         self.id = id
@@ -124,7 +124,10 @@ class RandomPlayer(Player):
             return None
         target = random.choice(possible_targets)
         if target.attack > self.attack:
-            intent = "PEACE"
+            if len(players) > 2:
+                intent = "PEACE"
+            else:
+                intent = "BATTLE"
         else:
             intent = "BATTLE"
         return Intent(copy.copy(self), target, intent)
@@ -209,7 +212,6 @@ class Game(object):
                 else:
                     player.gold -= 10
                     player.attack += 20
-
         self.battle(intents)
         self.handle_peace(intents)
         self.end_of_turn_calcs()
@@ -269,9 +271,9 @@ class Game(object):
             if player.status=="ALIVE":
                 num_alive += 1
                 self.winner = player.id
-        if self.winner == 1:
-            win += 1
+        #if self.winner == 1:
         if num_alive <= 1:
+            win[self.winner-1] += 1
             return "DONE"
         else:
             return "RUNNING"
@@ -284,10 +286,11 @@ if __name__ == '__main__':
     for i in range(1000):
         game = Game(PLAYERS)
 
-        # visualize(game)
+        #visualize(game)
         for step in range(STEPS):
             state = game.step()
-            # print("Step "+str(step+1))
+            #visualize(game)
+            #print("Step "+str(step+1))
             if state == "DONE":
                 break
     print(win)
