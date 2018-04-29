@@ -20,7 +20,6 @@ class Player(object):
         self.attack = attack
         self.gold = gold
         self.status = "ALIVE"
-        self.peace_dict = {}
 
     def __add__(self, other: 'Player') -> 'Coalition':
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
@@ -48,20 +47,14 @@ class Player(object):
         return "Player %d" % (self.id)
 
     def __str__(self):
-        return "Player %d: Attack: %d, Gold: %d, Status: %s \n In peace with: %s" % (
-            self.id, self.attack, self.gold, self.status, str(self.peace_dict))
-
-    def request_peace(self, player):
-        return True
+        return "Player %d: Attack: %d, Gold: %d, Status: %s \n" % (
+            self.id, self.attack, self.gold, self.status)
 
     def request_coal(self, player):
         return True
 
     def __eq__(self, other):
         return self.id == other.id
-
-    def set_peace(self, target, period=MAX_PEACE_PERIOD):
-        self.peace_dict[target.id] = period
 
     def gain_gold(self, gold):
         self.gold += gold
@@ -107,16 +100,6 @@ class Coalition(Player):
             if other == p:
                 return True
         return False
-
-
-    def set_peace(self, target, period=MAX_PEACE_PERIOD):
-        if target.id == -1:
-            for t in target.players:
-                for player in self.players:
-                    player.peace_dict[t.id] = period
-        else:
-            for player in self.players:
-                player.peace_dict[target.id] = period
 
     def gain_gold(self, gold):
         att = self.attack
@@ -182,6 +165,19 @@ class Game(object):
         # intents += coal_intents
 
         # self.form_coalitions(intents)  # Sends request to player to accept or reject
+        for intent in intents:
+            print(intent)
+
+        for intent in intents:
+            if intent.type == "FORTIFY":
+                player = self.players[self.players.index(intent.player)]
+                if player.gold < 10:
+                    print("Not enough gold")
+                else:
+                    player.gold -= 10
+                    player.attack += 20
+
+        self.form_coalitions(intents)  # Sends request to player to accept or reject
         self.battle(intents)
         # self.handle_peace(intents)
         self.end_of_turn_calcs()
@@ -229,6 +225,7 @@ class Game(object):
                     player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
                     target.suffer_loss(intent.player.attack * self.ATTACK_LOSS_FACTOR)
 
+    def form_coalitions(self, intents):
     def form_coal_intents(self):
         #     init_list = copy.deepcopy(self.players) #[1, 2, 3, 4, 5]
         #     init_list = random.shuffle(init_list)

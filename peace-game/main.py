@@ -1,14 +1,46 @@
 import copy
 import random
 from typing import List
-
+from IPython import get_ipython
 from tabulate import tabulate
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
-STEPS = 10
+STEPS = 1
+
+ipython = get_ipython()
+
+ipython.magic("%load_ext autoreload")
+ipython.magic("%autoreload 2")
+
+def simulate_move(game, intent):
+    clone = copy.deepcopy(game)
+    clone.battle([intent])
+    return clone
 
 class Player(object):
+    def getScore(self, game):
+        alive_players = [i for i in game.players if i.status == "ALIVE"]
+        players = len(alive_players)
+        players_007 = len([i for i in alive_players if i.attack > self.attack])
+        coefficients = {
+            'attack': lambda x:5,
+            'gold': lambda x:5,
+            # 'peace_dict': lambda x:len(x)
+        }
+        self_score = sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
+        return players + players_007*(-0.2) + self_score
+
+    def utility(self, game, intent):
+        # num players
+        # no of player who can kill
+        # your own stats
+        # probability of being attacked
+        a = self.getScore(game)
+        game_clone = simulate_move(game, intent)
+        b = self.getScore(game_clone)
+        return a-b
+
     def __init__(self, id, attack=0, gold=50):
         self.id = id
         self.attack = attack
@@ -17,18 +49,40 @@ class Player(object):
         self.peace_dict = {}
 
     def get_intent(self, players):
+        print("############################################")
+        print("Thinking for player %d" % self.id)
         temp = list(self.peace_dict.keys()) + [self.id]
         players = [i for i in players if i.status == "ALIVE" ]
         possible_targets = list(filter(lambda x: x.id not in temp, players))
-        print(self.id, "CAN TARGET" , possible_targets)
         if len(possible_targets) == 0:
-            return None
-        target = random.choice(possible_targets)
-        if target.attack > self.attack:
-            intent = "PEACE"
-        else:
-            intent = "BATTLE"
-        return Intent(copy.copy(self), target, intent)
+            return Intent(self, self, "FORTIFY")
+        highplayers = list(filter(lambda x: x.attack >= self.attack, possible_targets))
+        lowplayers = list(filter(lambda x: x.attack < self.attack, possible_targets))
+        print("HIGH %s" % highplayers)
+        print("LOW %s" % lowplayers)
+        max_util = self.utility(game, Intent(self, self, "FORTIFY"))
+        max_intent = Intent(self, self, "FORTIFY")
+
+        print("HIGH")
+        for player in highplayers:
+            intent = Intent(copy.copy(self), copy.copy(player), "PEACE")
+            new_util = self.utility(game, intent)
+            print(new_util)
+            if new_util > max_util:
+                max_util = new_util
+                max_intent = intent
+
+        print("LOW")
+        for player in lowplayers:
+            intent = Intent(copy.copy(self), copy.copy(player), "BATTLE")
+            new_util = self.utility(game, intent)
+            print(new_util)
+            if new_util > max_util:
+                max_util = new_util
+                max_intent = intent
+
+        print("############################################")
+        return max_intent
 
     def __repr__(self):
         return "Player %d" % (self.id)
@@ -50,6 +104,7 @@ class Player(object):
 
     def suffer_loss(self, attack):
         self.attack -= attack
+
 
 class HumanPlayer(Player):
     def get_intent(self):
@@ -115,6 +170,8 @@ class Game(object):
 
         for intent in intents:
             print(intent)
+            intent.target = copy.copy(intent.target)
+            intent.player = copy.copy(intent.player)
 
         if self.validate_intents(intents) == False:
             print("Incorrect intents")
@@ -149,12 +206,14 @@ class Game(object):
         Simulates a battle
         :return: list(Player) Losers
         """
-
+        random.shuffle(intents)
         for intent in intents:
             player = self.players[self.players.index(intent.player)]
             target = self.players[self.players.index(intent.target)]
 
             if intent.type == "BATTLE":
+                if intent.target.attack == "DEAD":
+                    continue
                 if intent.player.attack > intent.target.attack:
                     target.status = "DEAD"
                     player.suffer_loss(intent.target.attack*self.ATTACK_LOSS_FACTOR)
@@ -190,7 +249,6 @@ class Game(object):
         else:
             return "RUNNING"
         pass
-
 
 def visualize(game):
     print(tabulate([vars(x) for x in game.players]))
