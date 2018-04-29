@@ -177,7 +177,6 @@ class Game(object):
                     player.gold -= 10
                     player.attack += 20
 
-        self.form_coalitions(intents)  # Sends request to player to accept or reject
         self.battle(intents)
         # self.handle_peace(intents)
         self.end_of_turn_calcs()
@@ -225,7 +224,6 @@ class Game(object):
                     player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
                     target.suffer_loss(intent.player.attack * self.ATTACK_LOSS_FACTOR)
 
-    def form_coalitions(self, intents):
     def form_coal_intents(self):
         #     init_list = copy.deepcopy(self.players) #[1, 2, 3, 4, 5]
         #     init_list = random.shuffle(init_list)
