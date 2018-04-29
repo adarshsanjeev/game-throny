@@ -9,3 +9,9 @@ defensive = {
     "FORTIFY": 0.8,
     # "COALITION": 0.5
 }
+
+balanced = {
+    "BATTLE": 0.5,
+    "FORTIFY": 0.5,
+    # "COALITION": 0.5
+}

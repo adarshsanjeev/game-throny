@@ -2,6 +2,7 @@ import copy
 import random
 
 import initials
+import ipdb
 from IPython import get_ipython
 from tabulate import tabulate
 
@@ -11,7 +12,7 @@ ipython.magic("%autoreload 2")
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
-STEPS = 10
+STEPS = 123
 
 
 class Player(object):
@@ -133,11 +134,11 @@ class Intent(object):
         self.player = player
         self.target = target
         self.type = type  # Type is the type of move
-        self.gold = gold
+        # self.gold = gold
 
     def __str__(self):
-        return "Player %d targets %d with intent %s with tribute %d" % (
-            self.player.id, self.target.id if self.target else 0, self.type, self.gold)
+        return "Player %d targets %d with intent %s" % (
+            self.player.id, self.target.id if self.target else 0, self.type)
 
 
 class Game(object):
@@ -195,7 +196,7 @@ class Game(object):
 
     def end_of_turn_calcs(self):
         def splitplayer(player):
-            if type(player) == Player:
+            if type(player) == Player and type(Player) != Coalition:
                 return [player]
             else:
                 list = []
@@ -211,10 +212,8 @@ class Game(object):
         #             player.peace_dict.pop(i)
         for player in self.players:
             if player.id == -1:
-                self.players.remove(player)
                 self.players.extend(splitplayer(player))
-
-        print(self.players)
+        self.players = list(filter(lambda x: x.id != -1, self.players))
 
     def battle(self, intents):
         """
