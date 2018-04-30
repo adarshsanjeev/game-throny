@@ -314,6 +314,9 @@ class Game(object):
 
     def check_state(self):
         num_alive = 0
+        todie = filter(lambda x: x.attack <= 0, self.players)
+        for i in todie:
+            i.status = "DEAD"
         dead_players = list(filter(lambda x: x.status == "DEAD", self.players))
         alive_players = list(filter(lambda x: x.status == "ALIVE", self.players))
         self.winner = alive_players[0].id
@@ -344,7 +347,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     PLAYERS = deserialize_players(initials.__dict__[args.playermodel])
-
+    coalition_count = len(PLAYERS) * 2
     game = Game(PLAYERS)
 
     print("Initial")
