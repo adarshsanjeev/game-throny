@@ -1,36 +1,45 @@
 import copy
 import random
 from typing import List
-
-from IPython import get_ipython
+#from IPython import get_ipython
 from tabulate import tabulate
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
-STEPS = 1
+STEPS = 100
+win = [0,0,0,0,0]
 
-ipython = get_ipython()
+#ipython = get_ipython()
 
-ipython.magic("%load_ext autoreload")
-ipython.magic("%autoreload 2")
+#ipython.magic("%load_ext autoreload")
+#ipython.magic("%autoreload 2")
 
 def simulate_move(game, intent):
     clone = copy.deepcopy(game)
+
+    if intent.type == "FORTIFY":
+        player = clone.players[clone.players.index(intent.player)]
+        if player.gold > 10:
+            player.gold -= 10
+            player.attack += 50
+
     clone.battle([intent])
+    clone.handle_peace([intent])
     return clone
 
 class Player(object):
     def getScore(self, game):
+        coeffs = [0.1, 1, -1]
         alive_players = [i for i in game.players if i.status == "ALIVE"]
         players = len(alive_players)
         players_007 = len([i for i in alive_players if i.attack > self.attack])
         coefficients = {
-            'attack': lambda x:5,
-            'gold': lambda x:5,
+            'attack': lambda x:10,
+            'gold': lambda x:0,
             # 'peace_dict': lambda x:len(x)
         }
-        self_score = sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
-        return players + players_007*(-0.2) + self_score
+        self_score = coeffs[0]*players + coeffs[1]*players_007 + coeffs[2]*sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
+        return self_score
 
     def utility(self, game, intent):
         # num players
@@ -40,7 +49,7 @@ class Player(object):
         a = self.getScore(game)
         game_clone = simulate_move(game, intent)
         b = self.getScore(game_clone)
-        return a-b
+        return b-a
 
     def __init__(self, id, attack=0, gold=50):
         self.id = id
@@ -50,8 +59,8 @@ class Player(object):
         self.peace_dict = {}
 
     def get_intent(self, players):
-        print("############################################")
-        print("Thinking for player %d" % self.id)
+        # print("############################################")
+        # print("Thinking for player %d" % self.id)
         temp = list(self.peace_dict.keys()) + [self.id]
         players = [i for i in players if i.status == "ALIVE" ]
         possible_targets = list(filter(lambda x: x.id not in temp, players))
@@ -59,30 +68,30 @@ class Player(object):
             return Intent(self, self, "FORTIFY")
         highplayers = list(filter(lambda x: x.attack >= self.attack, possible_targets))
         lowplayers = list(filter(lambda x: x.attack < self.attack, possible_targets))
-        print("HIGH %s" % highplayers)
-        print("LOW %s" % lowplayers)
+        # print("HIGH %s" % highplayers)
+        # print("LOW %s" % lowplayers)
         max_util = self.utility(game, Intent(self, self, "FORTIFY"))
         max_intent = Intent(self, self, "FORTIFY")
 
-        print("HIGH")
+        # print("HIGH")
         for player in highplayers:
             intent = Intent(copy.copy(self), copy.copy(player), "PEACE")
             new_util = self.utility(game, intent)
-            print(new_util)
+            # print(new_util)
             if new_util > max_util:
                 max_util = new_util
                 max_intent = intent
 
-        print("LOW")
+        # print("LOW")
         for player in lowplayers:
             intent = Intent(copy.copy(self), copy.copy(player), "BATTLE")
             new_util = self.utility(game, intent)
-            print(new_util)
+            # print(new_util)
             if new_util > max_util:
                 max_util = new_util
                 max_intent = intent
 
-        print("############################################")
+        # print("############################################")
         return max_intent
 
     def __repr__(self):
@@ -106,6 +115,19 @@ class Player(object):
     def suffer_loss(self, attack):
         self.attack -= attack
 
+class RandomPlayer(Player):
+    def get_intent(self, players):
+        temp = list(self.peace_dict.keys()) + [self.id]
+        players = [i for i in players if i.status == "ALIVE" ]
+        possible_targets = list(filter(lambda x: x.id not in temp, players))
+        if len(possible_targets) == 0:
+            return None
+        target = random.choice(possible_targets)
+        if random.randint(0, 1)==0:
+            intent = "PEACE"
+        else:
+            intent = "BATTLE"
+        return Intent(copy.copy(self), target, intent)
 
 class HumanPlayer(Player):
     def get_intent(self):
@@ -131,7 +153,8 @@ class Game(object):
     GOLD_GAIN_FACTOR  = 0.6
 
     def __init__(self, players = 2):
-        self.players = [Player(i+1, float(random.randint(10, 30)) ) for i in range(players)]
+        self.players = [Player(1)]
+        self.players += [RandomPlayer(i+1, float(random.randint(10, 30)) ) for i in range(1, players)]
         self.winner = None
 
     def get_player(self, id):
@@ -144,16 +167,16 @@ class Game(object):
         for intent in intents:
             p = possible_targets[possible_targets.index(intent.player)]
             if intent.gold > p.gold:
-                print ("Not enough gold")
+                # print ("Not enough gold")
                 return False
             if intent.player == intent.target:
-                print ("Target is same as player")
+                # print ("Target is same as player")
                 return False
             if intent.target not in possible_targets:
-                print ("Not possible intent")
+                # print ("Not possible intent")
                 return False
             if intent.type not in ["BATTLE", "PEACE", "FORTIFY"]:
-                print ("Unknown intent")
+                # print ("Unknown intent")
                 return False
         return True
 
@@ -170,19 +193,19 @@ class Game(object):
                     intents += [intent]
 
         for intent in intents:
-            print(intent)
+            # print(intent)
             intent.target = copy.copy(intent.target)
             intent.player = copy.copy(intent.player)
 
-        if self.validate_intents(intents) == False:
-            print("Incorrect intents")
-            return self.check_state()
+        # if self.validate_intents(intents) == False:
+        #     print("Incorrect intents")
+        #     return self.check_state()
 
         for intent in intents:
             if intent.type == "FORTIFY":
                 player = self.players[self.players.index(intent.player)]
                 if player.gold < 10:
-                    print("Not enough gold")
+                    continue
                 else:
                     player.gold -= 10
                     player.attack += 20
@@ -213,7 +236,7 @@ class Game(object):
             target = self.players[self.players.index(intent.target)]
 
             if intent.type == "BATTLE":
-                if intent.target.status == "DEAD":
+                if intent.target.attack == "DEAD":
                     continue
                 if intent.player.attack > intent.target.attack:
                     target.status = "DEAD"
@@ -240,12 +263,15 @@ class Game(object):
                     target.set_peace(player)
 
     def check_state(self):
+        global win
         num_alive = 0
         for player in self.players:
             if player.status=="ALIVE":
                 num_alive += 1
                 self.winner = player.id
+        #if self.winner == 1:
         if num_alive <= 1:
+            win[self.winner-1] += 1
             return "DONE"
         else:
             return "RUNNING"
@@ -255,17 +281,14 @@ def visualize(game):
     print(tabulate([vars(x) for x in game.players]))
 
 if __name__ == '__main__':
-    game = Game(PLAYERS)
+    for i in range(1000):
+        game = Game(PLAYERS)
 
-    print("Initial")
-    # visualize(game)
-    for step in range(STEPS):
-        state = game.step()
-        print("Step "+str(step+1))
-        visualize(game)
-        if state == "DONE":
-            if game.winner is None:
-                print("All players died")
-            else:
-                print("The winner is: Player "+str(game.winner))
-            break
+        #visualize(game)
+        for step in range(STEPS):
+            state = game.step()
+            #visualize(game)
+            #print("Step "+str(step+1))
+            if state == "DONE":
+                break
+    print(win)
