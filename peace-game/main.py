@@ -29,17 +29,21 @@ def simulate_move(game, intent):
 
 class Player(object):
     def getScore(self, game):
-        coeffs = [5, -1, -5, 1]
+        coeffs = [5, -1, -5, 1, 10]
         self_alive = (self.status=="ALIVE")
         alive_players = [i for i in game.players if i.status == "ALIVE"]
         players = len(alive_players)
         players_007 = len([i for i in alive_players if i.attack > self.attack and i!=self])
+        fortified_check = 0
+        for i in game.players:
+            if i == self and i.attack > self.attack:
+                fortified_check = 1
         coefficients = {
             'attack': lambda x:10,
             'gold': lambda x:0,
             # 'peace_dict': lambda x:len(x)
         }
-        self_score = coeffs[0]*self_alive + coeffs[1]*players + coeffs[2]*players_007 + coeffs[3]*sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
+        self_score = coeffs[0]*self_alive + coeffs[1]*players + coeffs[2]*players_007 + coeffs[3]*sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0) + coeffs[4]*fortified_check
         return self_score
 
     def utility(self, game, intent):
@@ -47,6 +51,7 @@ class Player(object):
         # no of player who can kill
         # your own stats
         # probability of being attacked
+
         a = self.getScore(game)
         game_clone = simulate_move(game, intent)
         b = self.getScore(game_clone)
