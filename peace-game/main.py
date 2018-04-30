@@ -1,6 +1,7 @@
 import copy
 import random
 from typing import List
+
 from IPython import get_ipython
 from tabulate import tabulate
 
@@ -212,7 +213,7 @@ class Game(object):
             target = self.players[self.players.index(intent.target)]
 
             if intent.type == "BATTLE":
-                if intent.target.attack == "DEAD":
+                if intent.target.status == "DEAD":
                     continue
                 if intent.player.attack > intent.target.attack:
                     target.status = "DEAD"

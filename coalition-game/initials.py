@@ -37,5 +37,5 @@ randomattbellcurve = [
         'attack': random.normalvariate(100, 15),
         'gold': 10,
         'strategy': random.choice((strategies.aggressive, strategies.defensive))
-    } for x in range(4)
+    } for x in range(1000)
 ]
