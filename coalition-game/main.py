@@ -1,13 +1,19 @@
 import copy
+import csv
 import random
 
 import initials
-from IPython import get_ipython
 from tabulate import tabulate
 
-ipython = get_ipython()
-ipython.magic("%load_ext autoreload")
-ipython.magic("%autoreload 2")
+statsfile = open("stats.csv", 'a')
+statswriter = csv.writer(statsfile)
+statswriter.writerow(["turn", "Number of players alive", "Number of aggressive players alive"])
+coalstatsfile = open("coal.csv", 'a')
+coalwriter = csv.writer(coalstatsfile)
+coalwriter.writerow(["New Game"])
+# ipython = get_ipython()
+# ipython.magic("%load_ext autoreload")
+# ipython.magic("%autoreload 2")
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
@@ -153,6 +159,7 @@ class Game(object):
 
     def __init__(self, players=initials.plain):
         self.players = players
+        self.turn = 0
         self.dead_players = []
         self.winner = None
 
@@ -166,7 +173,17 @@ class Game(object):
         One time step of the game
         :return:
         """
+        self.turn += 1
         self.form_coalitions()  # Sends request to player to accept or reject
+
+        old_att = 0
+        for i in self.players:
+            if type(i) == Coalition:
+                att = len(list(filter(lambda x: x.strategy['name'] == "aggressive", i.players)))
+                ratio = att / len(i.players)
+                if ratio > 0.5:
+                    old_att += 1
+
         intents = []
         for x in self.players:
             if x.status == "ALIVE":
@@ -198,6 +215,15 @@ class Game(object):
 
         self.battle(intents)
         # self.handle_peace(intents)
+        # after_bucket = [0] * 11
+        new_att = 0
+        for i in self.players:
+            if type(i) == Coalition:
+                att = len(list(filter(lambda x: x.strategy['name'] == "aggressive", i.players)))
+                ratio = att / len(i.players)
+                if ratio > 0.5:
+                    new_att += 1
+        coalwriter.writerow([old_att, new_att])
         self.end_of_turn_calcs()
         return self.check_state()
 
@@ -228,6 +254,7 @@ class Game(object):
             if type(player) == Coalition:
                 self.players.extend(splitplayer(player))
         self.players = list(filter(lambda x: type(x) != Coalition, self.players))
+        self.collect_data()
 
     def battle(self, intents):
         """
@@ -332,6 +359,15 @@ class Game(object):
         game.players.remove(player)
         game.dead_players.append(player)
 
+    def collect_data(self):
+
+        # Oh hi mark!
+
+        num_players = len(self.players)
+        aggressive = len(list(filter(lambda x: x.strategy["name"] == "aggressive", self.players)))
+
+        statswriter.writerow([self.turn, num_players, aggressive])
+
 
 def visualize(game):
     print(tabulate([[x.id, x.attack] for x in game.players]))
@@ -362,3 +398,5 @@ if __name__ == '__main__':
             else:
                 print("The winner is: Player " + str(game.winner))
             break
+    statsfile.close()
+    coalstatsfile.close()
