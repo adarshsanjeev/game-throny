@@ -29,16 +29,17 @@ def simulate_move(game, intent):
 
 class Player(object):
     def getScore(self, game):
-        coeffs = [0.1, 1, -1]
+        coeffs = [5, -1, -5, 1]
+        self_alive = (self.status=="ALIVE")
         alive_players = [i for i in game.players if i.status == "ALIVE"]
         players = len(alive_players)
-        players_007 = len([i for i in alive_players if i.attack > self.attack])
+        players_007 = len([i for i in alive_players if i.attack > self.attack and i!=self])
         coefficients = {
             'attack': lambda x:10,
             'gold': lambda x:0,
             # 'peace_dict': lambda x:len(x)
         }
-        self_score = coeffs[0]*players + coeffs[1]*players_007 + coeffs[2]*sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
+        self_score = coeffs[0]*self_alive + coeffs[1]*players + coeffs[2]*players_007 + coeffs[3]*sum([coefficients[i](self.__dict__[i]) * self.__dict__[i] for i in coefficients], 0)
         return self_score
 
     def utility(self, game, intent):
@@ -92,6 +93,7 @@ class Player(object):
                 max_intent = intent
 
         # print("############################################")
+        #print(max_intent, players)
         return max_intent
 
     def __repr__(self):
