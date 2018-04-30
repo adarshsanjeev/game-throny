@@ -1,14 +1,19 @@
 import copy
+import csv
 import random
 
 import initials
-import ipdb
-from IPython import get_ipython
 from tabulate import tabulate
 
-ipython = get_ipython()
-ipython.magic("%load_ext autoreload")
-ipython.magic("%autoreload 2")
+statsfile = open("stats.csv", 'a')
+statswriter = csv.writer(statsfile)
+statswriter.writerow(["turn", "Number of players alive", "Number of aggressive players alive"])
+coalstatsfile = open("coal.csv", 'a')
+coalwriter = csv.writer(coalstatsfile)
+coalwriter.writerow(["New Game"])
+# ipython = get_ipython()
+# ipython.magic("%load_ext autoreload")
+# ipython.magic("%autoreload 2")
 
 MAX_PEACE_PERIOD = 3
 PLAYERS = 5
@@ -24,6 +29,7 @@ class Player(object):
         self.gold = gold
         self.status = "ALIVE"
         self.strategy = strategy
+        self.fortify = False
 
     def __add__(self, other: 'Player') -> 'Coalition':
         # FIXME: If player becomes part of coalition, and another player wants to target that player, will have invalid id possibly
@@ -68,20 +74,24 @@ class Player(object):
 
     def suffer_loss(self, attack):
         self.attack -= attack
-
-    def get_coal_intent(self, game):
-        # random
-        target = random.choice(list(filter(lambda x: x.status == "ALIVE", game.players)))
-        return Intent(copy.copy(self), target, "COAL")
-
+    #
+    # def get_coal_intent(self, game):
+    #     # random
+    #     target = random.choice(list(filter(lambda x: x.status == "ALIVE", game.players)))
+    #     return Intent(copy.copy(self), target, "COAL")
+    #
 
 def deserialize_players(inp):
     return [Player(x['id'], attack=x['attack'], gold=x['gold'], strategy=x['strategy']) for x in inp]
 
 
+coalition_count = 1001
+
 class Coalition(Player):
     def __init__(self, players):
-        super().__init__(-1)
+        global coalition_count
+        super().__init__(coalition_count)
+        coalition_count += 1
         self.players = players
 
     def __getattribute__(self, item):
@@ -120,6 +130,7 @@ class Coalition(Player):
             player.gold += gold * (player.attack / att)
 
     def suffer_loss(self, attack):
+        # ipdb.set_trace()
         att = self.attack
         if att == 0: att = 1
         loss_list = []
@@ -127,6 +138,7 @@ class Coalition(Player):
             loss_list.append(attack * (player.attack / att))
         for i in range(len(self.players)):
             self.players[i].attack = max(0, self.players[i].attack - loss_list[i])
+        # ipdb.set_trace()
 
 
 class Intent(object):
@@ -147,6 +159,7 @@ class Game(object):
 
     def __init__(self, players=initials.plain):
         self.players = players
+        self.turn = 0
         self.dead_players = []
         self.winner = None
 
@@ -160,7 +173,17 @@ class Game(object):
         One time step of the game
         :return:
         """
+        self.turn += 1
         self.form_coalitions()  # Sends request to player to accept or reject
+
+        old_att = 0
+        for i in self.players:
+            if type(i) == Coalition:
+                att = len(list(filter(lambda x: x.strategy['name'] == "aggressive", i.players)))
+                ratio = att / len(i.players)
+                if ratio > 0.5:
+                    old_att += 1
+
         intents = []
         for x in self.players:
             if x.status == "ALIVE":
@@ -183,14 +206,24 @@ class Game(object):
         for intent in intents:
             if intent.type == "FORTIFY":
                 player = self.players[self.players.index(intent.player)]
-                if player.gold < 10:
-                    print("Not enough gold")
-                else:
-                    player.gold -= 10
-                    player.attack += 20
+                # if player.gold < 10:
+                #     print("Not enough gold")
+                # else:
+                #     player.gold -= 10
+                player.attack += 20
+                player.fortify = True
 
         self.battle(intents)
         # self.handle_peace(intents)
+        # after_bucket = [0] * 11
+        new_att = 0
+        for i in self.players:
+            if type(i) == Coalition:
+                att = len(list(filter(lambda x: x.strategy['name'] == "aggressive", i.players)))
+                ratio = att / len(i.players)
+                if ratio > 0.5:
+                    new_att += 1
+        coalwriter.writerow([old_att, new_att])
         self.end_of_turn_calcs()
         return self.check_state()
 
@@ -210,10 +243,18 @@ class Game(object):
         #         player.peace_dict[i] -= 1
         #         if player.peace_dict[i] == 0:
         #             player.peace_dict.pop(i)
+
+        # Reverse Fortify
         for player in self.players:
-            if player.id == -1:
+            if player.fortify:
+                player.suffer_loss(20)
+                player.fortify = False
+
+        for player in self.players:
+            if type(player) == Coalition:
                 self.players.extend(splitplayer(player))
-        self.players = list(filter(lambda x: x.id != -1, self.players))
+        self.players = list(filter(lambda x: type(x) != Coalition, self.players))
+        self.collect_data()
 
     def battle(self, intents):
         """
@@ -222,17 +263,21 @@ class Game(object):
         """
 
         for intent in intents:
-            player = self.players[self.players.index(intent.player)]
-            target = self.players[self.players.index(intent.target)]
+            try:
+                player = self.players[self.players.index(intent.player)]
+                target = self.players[self.players.index(intent.target)]
 
-            if intent.type == "BATTLE":
-                if intent.player.attack > intent.target.attack:
-                    target.status = "DEAD"
-                    player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
-                    player.gain_gold(intent.target.gold * self.GOLD_GAIN_FACTOR)
-                else:
-                    player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
-                    target.suffer_loss(intent.player.attack * self.ATTACK_LOSS_FACTOR)
+                if intent.type == "BATTLE":
+                    if intent.player.attack > intent.target.attack:
+                        target.status = "DEAD"
+                        player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
+                        player.gain_gold(intent.target.gold * self.GOLD_GAIN_FACTOR)
+                        game.kill(target)
+                    else:
+                        player.suffer_loss(intent.target.attack * self.ATTACK_LOSS_FACTOR)
+                        target.suffer_loss(intent.player.attack * self.ATTACK_LOSS_FACTOR)
+            except:
+                pass
 
     def form_coal_intents(self):
         #     init_list = copy.deepcopy(self.players) #[1, 2, 3, 4, 5]
@@ -296,6 +341,9 @@ class Game(object):
 
     def check_state(self):
         num_alive = 0
+        todie = filter(lambda x: x.attack <= 0, self.players)
+        for i in todie:
+            i.status = "DEAD"
         dead_players = list(filter(lambda x: x.status == "DEAD", self.players))
         alive_players = list(filter(lambda x: x.status == "ALIVE", self.players))
         self.winner = alive_players[0].id
@@ -307,9 +355,22 @@ class Game(object):
             return "RUNNING"
         pass
 
+    def kill(self, player):
+        game.players.remove(player)
+        game.dead_players.append(player)
+
+    def collect_data(self):
+
+        # Oh hi mark!
+
+        num_players = len(self.players)
+        aggressive = len(list(filter(lambda x: x.strategy["name"] == "aggressive", self.players)))
+
+        statswriter.writerow([self.turn, num_players, aggressive])
+
 
 def visualize(game):
-    print(tabulate([vars(x) for x in game.players]))
+    print(tabulate([[x.id, x.attack] for x in game.players]))
 
 
 if __name__ == '__main__':
@@ -318,13 +379,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Describe your game')
     parser.add_argument('playermodel', type=str,
                         help='Pick one of the predefined player models: ' + "\n".join(dir(initials)))
-    parser.add_argument('strategymodel', type=str,
-                        help='Pick one of the predefined strategy models')
 
     args = parser.parse_args()
 
     PLAYERS = deserialize_players(initials.__dict__[args.playermodel])
-
+    coalition_count = len(PLAYERS) * 2
     game = Game(PLAYERS)
 
     print("Initial")
@@ -339,3 +398,5 @@ if __name__ == '__main__':
             else:
                 print("The winner is: Player " + str(game.winner))
             break
+    statsfile.close()
+    coalstatsfile.close()

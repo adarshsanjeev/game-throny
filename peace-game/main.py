@@ -211,6 +211,7 @@ class Game(object):
                 else:
                     player.gold -= 10
                     player.attack += 20
+
         self.battle(intents)
         self.handle_peace(intents)
         self.end_of_turn_calcs()
